@@ -1,5 +1,5 @@
 {
-  "authLevel": "function",
+  "authLevel": "anonymous",
   "bindings": [
     {
       "type": "httpTrigger",
