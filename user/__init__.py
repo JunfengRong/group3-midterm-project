@@ -9,11 +9,11 @@ from jose import jwt
 # Configuration Keycloak
 
 
-CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET")
-KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL")
-AUDIENCE = os.environ.get("KEYCLOAK_CLIENT_ID")
+KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", "https://<IP_VM>:8443/realms/myrealm")
 TOKEN_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/token"
 JWKS_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/certs"
+CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID", "my-python-api")
+CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET", "cI806FGxiAZr1WwDNQI9HQvRXSSViD0X")  
 ALGORITHM = "RS256"
 # Get public keys from Keycloak (JWKS)
 
@@ -28,7 +28,7 @@ def verify_token(req: func.HttpRequest):
 
         logging.info('Verifying token...')
         jwks = requests.get(JWKS_URL, timeout=30, verify=False).json()
-        payload = jwt.decode(token, jwks, algorithms=[ALGORITHM], audience=AUDIENCE)
+        payload = jwt.decode(token, jwks, algorithms=[ALGORITHM], audience=CLIENT_ID)
         logging.info('Token verified successfully')
 
         return payload, None
@@ -59,7 +59,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 )
 
             payload = {
-                "client_id": AUDIENCE,
+                "client_id": CLIENT_ID,
                 "grant_type": "password",
                 "username": username,
                 "password": password
