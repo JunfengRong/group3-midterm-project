@@ -11,6 +11,7 @@ from jose import jwt
 
 CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET")
 KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL")
+CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID", "my-python-api")
 TOKEN_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/token"
 JWKS_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/certs"
 AUDIENCE = os.environ.get("KEYCLOAK_CLIENT_ID")
