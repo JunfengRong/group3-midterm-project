@@ -9,10 +9,10 @@ from jose import jwt
 # Configuration Keycloak
 
 
-KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", "https://<IP_VM>:8443/realms/myrealm")
+KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", "https://134.33.49.3:8443/realms/midterm-project")
 TOKEN_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/token"
 JWKS_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/certs"
-CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID", "my-python-api")
+CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID", "midterm-api")
 CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET", "cI806FGxiAZr1WwDNQI9HQvRXSSViD0X")  
 ALGORITHM = "RS256"
 # Get public keys from Keycloak (JWKS)
