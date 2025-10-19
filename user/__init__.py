@@ -7,13 +7,12 @@ import requests
 from jose import jwt
 
 # Configuration Keycloak
-KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", "https://134.33.49.3:8443/realms/midterm-project")
+KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL")
 JWKS_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/certs"
-AUDIENCE = os.environ.get("KEYCLOAK_CLIENT_ID", "midterm-api")
+AUDIENCE = os.environ.get("KEYCLOAK_CLIENT_ID")
 ALGORITHM = "RS256"
 
 # Get public keys from Keycloak (JWKS)
-jwks = requests.get(JWKS_URL).json()
 
 def verify_token(req: func.HttpRequest):
     """Check the JWT token sent in the Authorization header"""
@@ -23,9 +22,13 @@ def verify_token(req: func.HttpRequest):
 
     token = auth_header.split(" ")[1]
     try:
+        logging.info('Verifying token...')
+        jwks = requests.get(JWKS_URL, timeout=30).json()
         payload = jwt.decode(token, jwks, algorithms=[ALGORITHM], audience=AUDIENCE)
+        logging.info('Token verified successfully')
         return payload, None
     except Exception as e:
+        logging.error(f"Token verification failed: {e}")
         return None, str(e)
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
