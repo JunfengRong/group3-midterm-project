@@ -7,25 +7,30 @@ import requests
 from jose import jwt
 
 # Configuration Keycloak
+
+
+CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET")
 KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL")
+TOKEN_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/token"
 JWKS_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/certs"
 AUDIENCE = os.environ.get("KEYCLOAK_CLIENT_ID")
 ALGORITHM = "RS256"
-
 # Get public keys from Keycloak (JWKS)
 
 def verify_token(req: func.HttpRequest):
-    """Check the JWT token sent in the Authorization header"""
+    """Vérifie le token JWT envoyé dans l'en-tête Authorization"""
     auth_header = req.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return None, "Missing or invalid Authorization header"
 
     token = auth_header.split(" ")[1]
     try:
+
         logging.info('Verifying token...')
         jwks = requests.get(JWKS_URL, timeout=30, verify=False).json()
         payload = jwt.decode(token, jwks, algorithms=[ALGORITHM], audience=AUDIENCE)
         logging.info('Token verified successfully')
+
         return payload, None
     except Exception as e:
         logging.error(f"Token verification failed: {e}")
@@ -33,6 +38,49 @@ def verify_token(req: func.HttpRequest):
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Processing user request...')
+
+
+    action = req.route_params.get("action")
+
+    # ---------------------------
+    # 1. Route spéciale : /token
+    # ---------------------------
+    if action == "token" and req.method == "POST":
+        try:
+            data = req.get_json()
+            username = data.get("username")
+            password = data.get("password")
+
+            if not username or not password:
+                return func.HttpResponse(
+                    json.dumps({"error": "Missing username or password"}),
+                    status_code=400,
+                    mimetype="application/json"
+                )
+
+            payload = {
+                "client_id": CLIENT_ID,
+                "grant_type": "password",
+                "username": username,
+                "password": password
+            }
+            if CLIENT_SECRET:
+                payload["client_secret"] = CLIENT_SECRET
+
+            resp = requests.post(TOKEN_URL, data=payload, verify=False)
+            return func.HttpResponse(
+                resp.text,
+                status_code=resp.status_code,
+                mimetype="application/json"
+            )
+        except Exception as e:
+            return func.HttpResponse(
+                json.dumps({"error": "Token request failed", "details": str(e)}),
+                status_code=500,
+                mimetype="application/json"
+            )
+
+
 
     # OAuth2 Verification
     user, error = verify_token(req)
