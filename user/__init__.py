@@ -23,7 +23,7 @@ def verify_token(req: func.HttpRequest):
     token = auth_header.split(" ")[1]
     try:
         logging.info('Verifying token...')
-        jwks = requests.get(JWKS_URL, timeout=30).json()
+        jwks = requests.get(JWKS_URL, timeout=30, verify=False).json()
         payload = jwt.decode(token, jwks, algorithms=[ALGORITHM], audience=AUDIENCE)
         logging.info('Token verified successfully')
         return payload, None
