@@ -3,11 +3,44 @@ import pyodbc
 import azure.functions as func
 import os
 import json
+import requests
+from jose import jwt
+
+# Configuration Keycloak
+KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", "https://134.33.49.3:8443/realms/midterm-project")
+JWKS_URL = f"{KEYCLOAK_URL}/protocol/openid-connect/certs"
+AUDIENCE = os.environ.get("KEYCLOAK_CLIENT_ID", "midterm-api")
+ALGORITHM = "RS256"
+
+# Get public keys from Keycloak (JWKS)
+jwks = requests.get(JWKS_URL).json()
+
+def verify_token(req: func.HttpRequest):
+    """Check the JWT token sent in the Authorization header"""
+    auth_header = req.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None, "Missing or invalid Authorization header"
+
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, jwks, algorithms=[ALGORITHM], audience=AUDIENCE)
+        return payload, None
+    except Exception as e:
+        return None, str(e)
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Processing user request...')
-    conn_str = os.environ.get("SQL_CONNECTION_STRING")
 
+    # OAuth2 Verification
+    user, error = verify_token(req)
+    if error:
+        return func.HttpResponse(
+            json.dumps({"error": "Unauthorized", "details": error}),
+            status_code=401,
+            mimetype="application/json"
+        )
+
+    conn_str = os.environ.get("SQL_CONNECTION_STRING")
     if not conn_str:
         return func.HttpResponse(
             json.dumps({"error": "Missing SQL connection string"}),
@@ -21,7 +54,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         with pyodbc.connect(conn_str) as conn:
             cursor = conn.cursor()
 
-            if method == "POST":  # 添加
+            if method == "POST":
                 try:
                     data = req.get_json()
                     name, email = data.get("name"), data.get("email")
@@ -34,7 +67,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                     cursor.execute("INSERT INTO Users (name, email) VALUES (?, ?)", name, email)
                     conn.commit()
                     return func.HttpResponse(
-                        json.dumps({"message": "User added"}),
+                        json.dumps({"message": "User added", "by": user.get("preferred_username")}),
                         status_code=201,
                         mimetype="application/json"
                     )
@@ -45,7 +78,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                         mimetype="application/json"
                     )
 
-            elif method == "GET":  # 查询
+            elif method == "GET":
                 user_id = req.params.get("id")
                 if user_id:
                     cursor.execute("SELECT * FROM Users WHERE id=?", user_id)
@@ -70,7 +103,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                         mimetype="application/json"
                     )
 
-            elif method == "PUT":  # 修改
+            elif method == "PUT":
                 data = req.get_json()
                 user_id, name, email = data.get("id"), data.get("name"), data.get("email")
                 if not user_id or not name or not email:
@@ -87,7 +120,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                     mimetype="application/json"
                 )
 
-            elif method == "DELETE":  # 删除
+            elif method == "DELETE":
                 user_id = req.params.get("id")
                 if not user_id:
                     return func.HttpResponse(
