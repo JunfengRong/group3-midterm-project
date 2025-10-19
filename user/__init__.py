@@ -60,7 +60,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 )
 
             payload = {
-                "client_id": CLIENT_ID,
+                "client_id": AUDIENCE,
                 "grant_type": "password",
                 "username": username,
                 "password": password
